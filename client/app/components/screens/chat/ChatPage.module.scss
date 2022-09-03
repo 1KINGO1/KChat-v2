@@ -1,0 +1,28 @@
+.wrapper{
+  display: flex;
+  height: 100%;
+  padding: 20px;
+}
+
+.profileWrapper{
+  width: 300px;
+  background-color: var(--gray-900);
+  padding: 10px 5px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+}
+
+.messagesWrapper{
+  width: 100%;
+  margin: 0 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--gray-900);
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.messageList{
+
+}

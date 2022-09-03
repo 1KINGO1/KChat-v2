@@ -1,0 +1,26 @@
+.wrapper{
+  padding: 5px 10px 10px 10px;
+  display: flex;
+  align-items: center;
+
+  position: relative;
+
+  border-bottom: 10px solid transparent;
+
+  &::before{
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    background-color: var(--gray-50-10);
+  }
+}
+
+.messagesForNickname{
+  color: var(--gray-50);
+  font-weight: bold;
+  font-size: 20px;
+  margin: 0 10px 0 0;
+}

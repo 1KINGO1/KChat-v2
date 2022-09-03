@@ -1,0 +1,41 @@
+.wrapper{
+  padding: 5px;
+  background-color: var(--gray-50-10);
+  margin: auto 0 0 0;
+  border-radius: 5px;
+  display: flex;
+}
+
+.input{
+  display: block;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background-color: var(--gray-800);
+  border-radius: 5px 0 0 5px;
+  color: var(--gray-50);
+  padding: 5px 10px 5px 10px;
+}
+
+.sendButton{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 5px 5px 0;
+  background-color: var(--gray-800);
+  padding: 5px 10px 5px 10px;
+  outline: none;
+  border: 0;
+  cursor: pointer;
+
+  transition: .1s all ease-in-out;
+
+  &:hover{
+    background-color: var(--gray-900)
+  }
+
+  svg{
+    color: var(--gray-50);
+    transform: scale(1.1);
+  }
+}
