@@ -54,6 +54,15 @@ let MeController = class MeController {
             res.statusCode = 400;
             return res.send((0, responseMessage_1.default)(true, 'User doesnt exist'));
         }
+        if (user.login === targetUser.login) {
+            res.statusCode = 400;
+            return res.send((0, responseMessage_1.default)(true, 'You cant start conversation with yourself'));
+        }
+        const userConversations = await this.dbService.findConversationWithUser(user._id);
+        if (userConversations.some(conversation => conversation.users.some(user => user.login === targetUser.login))) {
+            res.statusCode = 400;
+            return res.send((0, responseMessage_1.default)(true, 'You have already started conversation with this user.'));
+        }
         res.send(await this.dbService.createConversation(user._id, targetUser._id));
     }
 };

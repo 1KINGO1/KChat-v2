@@ -1,44 +1,52 @@
-import {FC, useEffect} from 'react';
+import {FC, useEffect, useRef} from 'react';
 import Message from './Message';
-import styles from './Messages.module.scss';
-import {useDispatch, useSelector} from 'react-redux';
-import {RootState} from '@/store/store';
-
 import MessageType from '@/shared/interfaces/Message';
+import useConversation from '@/hooks/useConversation';
+import styles from './Messages.module.scss';
 import socket from '@/utils/socket';
-import {addMessage, fetchMessages} from '@/store/slices/cache';
-import {setLoading} from '@/store/slices/auth';
+import {useSelector} from 'react-redux';
+import {RootState} from '@/store/store';
+import useNewMessageSubscribe from '@/hooks/useNewMessageSubscribe';
 
 const Messages: FC = () => {
 
-  const messages = useSelector<RootState>(state => state.cache.messages) as MessageType[];
-  const dispatch = useDispatch();
+  const endOfMessages = useRef<HTMLLIElement>({} as HTMLLIElement);
+  const selectedId = useSelector<RootState>(state => state.cache.selectedConversationId) as string;
+  const conversation = useConversation();
+
+  //Subscribe to new messages
+  useNewMessageSubscribe();
 
   useEffect(() => {
+    endOfMessages.current.scrollIntoView();
+  }, [selectedId]);
 
-    dispatch(setLoading(true));
 
-    socket.on('fetchMessages', messages => {
-      dispatch(fetchMessages(messages));
+  useEffect(() => {
+    const handler = (message: {conversationId: string, message: MessageType}) => {
+      console.log(conversation?._id, message.conversationId);
+      if (message.conversationId === conversation?._id){
+        // To do scroll after new message render
+        // I don't know for sure why this is working, but never mind.
+        queueMicrotask(() => endOfMessages.current.scrollIntoView());
+      }
+    };
 
-      dispatch(setLoading(false));
-    });
-    socket.on('messageCreate', message => {
-      dispatch(addMessage(message));
-    })
+    endOfMessages.current.scrollIntoView();
+    socket.on('messageCreate', handler);
 
     return () => {
-      socket.off('fetchMessages');
-      socket.off('messageCreate');
+      socket.off('messageCreate', handler);
     }
   }, []);
 
 
   return (
     <ul className={styles.wrapper}>
-      {messages.map(message => (
+      {conversation?.messages.map(message => (
         <Message author={message.author} content={message.content} id={message._id} key={message._id}/>
       ))}
+      <li className={styles.endOfMessages} ref={endOfMessages}></li>
     </ul>
   )
 };

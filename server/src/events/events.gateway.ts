@@ -3,7 +3,7 @@ import {
   OnGatewayConnection,
   WebSocketServer,
   ConnectedSocket,
-  SubscribeMessage, MessageBody
+  SubscribeMessage, MessageBody, OnGatewayDisconnect
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import {DbService} from '../db/db.service';
@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
     origin: process.env.CLIENT_URL,
   },
 })
-export class EventsGateway implements OnGatewayConnection {
+export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   constructor(
     private dbService: DbService,
@@ -27,7 +27,7 @@ export class EventsGateway implements OnGatewayConnection {
   server: Server;
 
   async handleConnection(@ConnectedSocket() client: Socket) {
-    const {token} = cookie.parse(client.handshake.headers.cookie || '')
+    const {token} = cookie.parse(client.handshake.headers.cookie || '');
 
     if (!token) return client.disconnect();
     const data = await this.authService.verifyToken(token);
@@ -38,7 +38,32 @@ export class EventsGateway implements OnGatewayConnection {
     client.data.user = user;
 
     setTimeout(async () => {
-      client.emit('fetchConversations', await this.dbService.findConversationWithUser(user._id));
+
+      this.server.sockets.emit('userOnline', user._id);
+
+      const conversations = await this.dbService.findConversationWithUser(user._id);
+
+      conversations.forEach(conversation => {
+        client.join(conversation._id);
+      })
+
+      let onlineSockets = [];
+
+      for (let key of [...this.server.sockets.sockets.keys()]){
+        if (this.server.sockets.sockets.get(key).data.user.login === client.data.user.login) continue;
+
+        onlineSockets.push(this.server.sockets.sockets.get(key).data.user._id);
+      }
+
+      client.emit('onlineUsers', onlineSockets)
+
+      client.emit('fetchConversations', conversations);
+    }, 150)
+  };
+
+  async handleDisconnect(@ConnectedSocket() client: Socket){
+    setTimeout(() => {
+      this.server.sockets.emit('userOffline', client.data.user._id);
     }, 150)
   }
 
@@ -49,19 +74,13 @@ export class EventsGateway implements OnGatewayConnection {
 
     if (conversation.users.every(user => user._id + "" !== client.data.user._id + "")) return;
 
-    if (client.rooms.has(id)) return;
-
-    client.leave(client.rooms.keys()[1]);
-
-    client.join(id);
-
-    client.emit('fetchMessages', await this.dbService.getMessages(id));
+    client.data.selectedId = id;
   }
 
   @SubscribeMessage('messageCreate')
   async messageCreate(@ConnectedSocket() client: Socket, @MessageBody('value') value: string){
 
-    const roomId = [...client.rooms.keys()][1];
+    const roomId = client.data?.selectedId;
 
     if (!roomId) return;
 
@@ -86,12 +105,15 @@ export class EventsGateway implements OnGatewayConnection {
     );
 
     const messageObj = {
-      _id: id,
-      content: value,
-      author: {
-        id: client.data.user._id,
-        login: client.data.user.login,
-        avatar: client.data.user.avatar,
+      conversationId: roomId,
+      message: {
+        _id: id,
+        content: value,
+        author: {
+          id: client.data.user._id,
+          login: client.data.user.login,
+          avatar: client.data.user.avatar,
+        },
       },
     }
     client.emit('messageCreate', messageObj);

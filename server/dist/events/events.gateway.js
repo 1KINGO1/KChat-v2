@@ -34,7 +34,25 @@ let EventsGateway = class EventsGateway {
             return client.disconnect();
         client.data.user = user;
         setTimeout(async () => {
-            client.emit('fetchConversations', await this.dbService.findConversationWithUser(user._id));
+            this.server.sockets.emit('userOnline', user._id);
+            const conversations = await this.dbService.findConversationWithUser(user._id);
+            conversations.forEach(conversation => {
+                client.join(conversation._id);
+            });
+            let onlineSockets = [];
+            for (let key of [...this.server.sockets.sockets.keys()]) {
+                if (this.server.sockets.sockets.get(key).data.user.login === client.data.user.login)
+                    continue;
+                onlineSockets.push(this.server.sockets.sockets.get(key).data.user._id);
+            }
+            client.emit('onlineUsers', onlineSockets);
+            client.emit('fetchConversations', conversations);
+        }, 150);
+    }
+    ;
+    async handleDisconnect(client) {
+        setTimeout(() => {
+            this.server.sockets.emit('userOffline', client.data.user._id);
         }, 150);
     }
     async groupChangeHandle(client, id) {
@@ -43,14 +61,11 @@ let EventsGateway = class EventsGateway {
             return;
         if (conversation.users.every(user => user._id + "" !== client.data.user._id + ""))
             return;
-        if (client.rooms.has(id))
-            return;
-        client.leave(client.rooms.keys()[1]);
-        client.join(id);
-        client.emit('fetchMessages', await this.dbService.getMessages(id));
+        client.data.selectedId = id;
     }
     async messageCreate(client, value) {
-        const roomId = [...client.rooms.keys()][1];
+        var _a;
+        const roomId = (_a = client.data) === null || _a === void 0 ? void 0 : _a.selectedId;
         if (!roomId)
             return;
         const conversation = await this.dbService.findConversationById(roomId);
@@ -67,12 +82,15 @@ let EventsGateway = class EventsGateway {
             _id: client.data.user._id
         });
         const messageObj = {
-            _id: id,
-            content: value,
-            author: {
-                id: client.data.user._id,
-                login: client.data.user.login,
-                avatar: client.data.user.avatar,
+            conversationId: roomId,
+            message: {
+                _id: id,
+                content: value,
+                author: {
+                    id: client.data.user._id,
+                    login: client.data.user.login,
+                    avatar: client.data.user.avatar,
+                },
             },
         };
         client.emit('messageCreate', messageObj);
@@ -89,6 +107,12 @@ __decorate([
     __metadata("design:paramtypes", [socket_io_1.Socket]),
     __metadata("design:returntype", Promise)
 ], EventsGateway.prototype, "handleConnection", null);
+__decorate([
+    __param(0, (0, websockets_1.ConnectedSocket)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [socket_io_1.Socket]),
+    __metadata("design:returntype", Promise)
+], EventsGateway.prototype, "handleDisconnect", null);
 __decorate([
     (0, websockets_1.SubscribeMessage)('groupChange'),
     __param(0, (0, websockets_1.ConnectedSocket)()),

@@ -18,7 +18,7 @@ const Message: FC<IMessage> = ({
                                }) => {
   return (
     <li className={styles.wrapper}>
-      <img src={author.avatar} alt={author.login + ' avatar'} className={styles.avatar}/>
+      <img src={author.avatar || 'https://sbcf.fr/wp-content/uploads/2018/03/sbcf-default-avatar.png'} alt={author.login + ' avatar'} className={styles.avatar}/>
       <div className={styles.header}>
         <span className={styles.nickname}>
           {author.login}

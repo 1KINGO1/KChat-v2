@@ -1,13 +1,13 @@
-import {FC, useContext, useEffect} from 'react';
+import {FC} from 'react';
 import styles from './Conversations.module.scss';
-import {useDispatch, useSelector} from 'react-redux';
+import {useSelector} from 'react-redux';
 import {RootState} from '@/store/store';
-import Conversation from '@/components/screens/chat/components/Conversations/Conversation';
-
+import Conversation from './Conversation';
 import ConversationType from '@/shared/interfaces/Conversation';
 import User from '@/shared/interfaces/User';
-import socket from '@/utils/socket';
-import {fetchConversations} from '@/store/slices/cache';
+import useNewMessageSubscribe from '@/hooks/useNewMessageSubscribe';
+import useFetchConversations from '@/hooks/useFetchConversations';
+import useUserStatuses from '@/hooks/useUserStatuses';
 
 const Conversations: FC = () => {
 
@@ -15,16 +15,11 @@ const Conversations: FC = () => {
   const selectedId = useSelector<RootState>(state => state.cache.selectedConversationId);
   const id = useSelector<RootState>(state => state.auth.user._id);
 
-  const dispatch = useDispatch();
+  //Fetch conversations
+  useFetchConversations();
 
-  useEffect(() => {
-    socket.on('fetchConversations', (data: ConversationType[]) => {
-      dispatch(fetchConversations(data));
-    });
-    return () => {
-      socket.off('fetchConversations');
-    }
-  }, []);
+  //Fetch user statuses
+  useUserStatuses();
 
 
   return (
